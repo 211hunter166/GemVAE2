@@ -1,6 +1,8 @@
 import tensorflow.compat.v1 as tf
 import tensorflow as tf
 import tensorflow.compat.v1 as v1
+import tensorflow as tf
+import tensorflow.keras.backend as K
 
 class LinBnDrop(tf.keras.Sequential):
     def __init__(self, n_in, n_out, bn=True, p=0., act=None, lin_first=True):
@@ -17,7 +19,38 @@ class LinBnDrop(tf.keras.Sequential):
 
 
 class GATE():
-    def __init__(self, hidden_dims1, hidden_dims2,z_dim=30,alpha=0.3, nonlinear=True, weight_decay=0.0001, num_hidden=256, num_proj_hidden=256, tau=0.5,kl_loss = 0,contrastive_loss = 10,recon_loss = 1,weight_decay_loss = 1,recon_loss_type = "MSE"):
+
+
+
+    def contrastive_loss_function(y_true, y_pred, margin=1.0):
+        """
+        Calculates contrastive loss, aiming to bring positive pairs closer 
+        and push negative pairs apart.
+        """
+        square_pred = K.square(y_pred)
+        margin_square = K.square(K.maximum(margin - y_pred, 0))
+        return K.mean(y_true * square_pred + (1 - y_true) * margin_square)
+
+    def create_pairs(embedding, neighbors, encoder_model):
+        """
+        Create positive and negative pairs for contrastive learning.
+        Positive pairs are node embedding and local neighbor representations.
+        Negative pairs are created by shuffling data, passing through encoder, and then finding neighbors.
+        """
+        # Positive pairs: current node and its neighbors
+        positive_pairs = [(embedding[i], neighbors[i]) for i in range(len(embedding))]
+
+        # Negative pairs: Shuffle data, pass through encoder, and calculate new neighbors
+        corrupted_data = tf.random.shuffle(embedding)  # Shuffling the data for corruption
+        corrupted_embeddings = encoder_model(corrupted_data)  # Passing corrupted data through encoder
+        corrupted_neighbors = [encoder_model(neighbors[i]) for i in range(len(embedding))]  # Neighbor representation for corrupted embeddings
+
+        # Create negative pairs
+        negative_pairs = [(embedding[i], corrupted_neighbors[i]) for i in range(len(embedding))]
+
+        return positive_pairs, negative_pairs
+
+    def __init__(self, hidden_dims1, hidden_dims2,z_dim=30,alpha=0.3, nonlinear=True, weight_decay=0.0001, num_hidden=256, num_proj_hidden=256, tau=0.5,kl_loss = 0.02,contrastive_loss = 0.1,recon_loss = 1,weight_decay_loss = 1,recon_loss_type = "MSE"):
         self.n_layers1 = len(hidden_dims1) - 1
         self.n_layers2 = len(hidden_dims2) - 1
         self.alpha = alpha

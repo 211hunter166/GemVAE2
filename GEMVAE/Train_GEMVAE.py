@@ -13,7 +13,7 @@ def train_GEMVAE(adata1,adata2,
                 gradient_clipping=5, nonlinear=True, weight_decay=0.0001,verbose=True, 
                 random_seed=2020, pre_labels=None, pre_resolution1=0.2, pre_resolution2=0.2,
                 save_attention=False, save_loss=False, save_reconstrction=False,
-                kl_loss = 0.01,contrastive_loss = 10,recon_loss = 1,weight_decay_loss = 1,recon_loss_type = "ZINB",task=''
+                kl_loss = 0.02,contrastive_loss = 0.1,recon_loss = 1,weight_decay_loss = 1,recon_loss_type = "ZINB",task=''
                 ):
     """\
     Training graph attention auto-encoder.
