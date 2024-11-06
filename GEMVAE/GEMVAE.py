@@ -38,7 +38,7 @@ class GEMVAE():
                 kl_loss = kl_loss,contrastive_loss = contrastive_loss,recon_loss = recon_loss,weight_decay_loss = weight_decay_loss,recon_loss_type = recon_loss_type )
         
         
-        self.c_loss, self.loss, self.H, self.C, self.ReX1, self.ReX2 = self.gate(self.A1,self.A2, self.prune_A1,self.prune_A2, self.X1,self.X2,self.G1,self.G2)
+        self.c_loss, self.loss, self.H, self.C, self.ReX1, self.ReX2 = self.gate(self.A1,self.A2, self.prune_A1,self.prune_A2, self.X1,self.X2,G1,G2)
 
         self.optimize(self.loss)
         self.build_session()
