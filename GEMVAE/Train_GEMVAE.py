@@ -184,7 +184,7 @@ def train_GEMVAE(adata1,adata2,
             sc.pl.spatial(adata2, img_key="hires", color="expression_louvain_label2", size=1.5, title='protein pre-clustering result', spot_size=1)
 
 
-        trainer(G_tf1,G_tf2, prune_G_tf1,prune_G_tf2, X1,X2)
+        trainer(G_tf1,G_tf2, prune_G_tf1,prune_G_tf2, X1,X2,G1,G2)
         embeddings, attention1 , attention2 , loss, ReX1, ReX2 = trainer.infer(G_tf1,G_tf2, prune_G_tf1,prune_G_tf2, X1,X2)
 
     global df

@@ -87,7 +87,7 @@ class GATE():
         for layer in range(self.n_layers2 - 1, -1, -1):
             self.W_dec2[layer] = tf.Variable(tf.random.normal([hidden_dims2[layer+1], hidden_dims2[layer]]))
 
-    def __call__(self, A1,A2 ,prune_A1,prune_A2, X1,X2):
+    def __call__(self, A1,A2 ,prune_A1,prune_A2, X1,X2,G1,G2):
         # Encoder 1
         H1 = X1
         for layer in range(self.n_layers1):
