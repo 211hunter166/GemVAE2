@@ -226,7 +226,7 @@ class GATE():
         contrastive_loss2 = sum([self.contrastive_loss_function(1, tf.norm(a - b)) for a, b in pos_pairs2]) +                         sum([self.contrastive_loss_function(0, tf.norm(a - b)) for a, b in neg_pairs2])
         
         total_contrastive_loss = contrastive_loss1 + contrastive_loss2
-        self.c_loss = total_contrastive_loss
+        #self.c_loss = total_contrastive_loss
         # Add weighted contrastive loss to the total loss
         self.loss = (self.contrastive_loss * total_contrastive_loss) + (self.recon_loss * rloss) +                 (self.weight_decay_loss * weight_decay_loss) + (self.kl_loss * kl_divergance_loss)
     
