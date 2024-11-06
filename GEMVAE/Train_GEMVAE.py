@@ -111,11 +111,13 @@ def train_GEMVAE(adata1,adata2,
 
 
     tf.compat.v1.disable_eager_execution()
-    trainer = GEMVAE(hidden_dims1=[X1.shape[1]] + hidden_dims1,hidden_dims2=[X2.shape[1]] + hidden_dims2, z_dim=z_dim,alpha=alpha, 
+    trainer = GEMVAE(hidden_dims1=[X1.shape[1]] + hidden_dims1,hidden_dims2=[X2.shape[1]] + hidden_dims2,
+                    G1=G1,G2=G2,
+                    z_dim=z_dim,alpha=alpha, 
                     n_epochs=n_epochs, lr=lr, gradient_clipping=gradient_clipping, 
                     nonlinear=nonlinear,weight_decay=weight_decay, verbose=verbose, 
-                    random_seed=random_seed, 
-                    kl_loss=kl_loss,contrastive_loss=contrastive_loss,recon_loss=recon_loss,weight_decay_loss=weight_decay_loss,recon_loss_type=recon_loss_type                    
+                    random_seed=random_seed,
+                    kl_loss=kl_loss,contrastive_loss=contrastive_loss,recon_loss=recon_loss,weight_decay_loss=weight_decay_loss,recon_loss_type=recon_loss_type,                   
                     )
     
 
