@@ -217,7 +217,19 @@ class GATE():
 
         # Total loss
         print("Loss weights are = ",self.contrastive_loss,self.recon_loss,self.weight_decay_loss,self.kl_loss)
-        self.loss = (self.contrastive_loss*con_loss) + (self.recon_loss*rloss) + (self.weight_decay_loss*weight_decay_loss) + (self.kl_loss*kl_divergance_loss)
+        
+        # Calculate positive and negative pairs and contrastive loss
+        pos_pairs1, neg_pairs1 = self.create_pairs(H1, G1, self.__encoder1)
+        pos_pairs2, neg_pairs2 = self.create_pairs(H2, G2, self.__encoder2)
+        
+        contrastive_loss1 = sum([self.contrastive_loss_function(1, tf.norm(a - b)) for a, b in pos_pairs1]) +                         sum([self.contrastive_loss_function(0, tf.norm(a - b)) for a, b in neg_pairs1])
+        contrastive_loss2 = sum([self.contrastive_loss_function(1, tf.norm(a - b)) for a, b in pos_pairs2]) +                         sum([self.contrastive_loss_function(0, tf.norm(a - b)) for a, b in neg_pairs2])
+        
+        total_contrastive_loss = contrastive_loss1 + contrastive_loss2
+        self.c_loss = total_contrastive_loss
+        # Add weighted contrastive loss to the total loss
+        self.loss = (self.contrastive_loss * total_contrastive_loss) + (self.recon_loss * rloss) +                 (self.weight_decay_loss * weight_decay_loss) + (self.kl_loss * kl_divergance_loss)
+    
 
         if self.alpha == 0:
             print("\n\nAlpha = 0")
