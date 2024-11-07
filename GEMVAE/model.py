@@ -45,10 +45,10 @@ class GATE():
         # Pass corrupted data through the appropriate encoder
         if is_gene_modality:
             corrupted_embeddings = encoder_model.__encoder1(corrupted_data)  # Gene modality encoder
-            corrupted_neighbors = [encoder_model.__encoder1(neighbors[i]) for i in range(len(embedding))]
+            corrupted_neighbors = [encoder_model.__encoder1(neighbors[i]) for i in range(embedding.shape)]
         else:
             corrupted_embeddings = encoder_model.__encoder2(corrupted_data)  # Protein modality encoder
-            corrupted_neighbors = [encoder_model.__encoder2(neighbors[i]) for i in range(len(embedding))]
+            corrupted_neighbors = [encoder_model.__encoder2(neighbors[i]) for i in range(embedding.shape)]
         
         # Negative pairs: original embedding paired with corrupted neighbor embeddings
         negative_pairs = [(embedding[i], corrupted_neighbors[i]) for i in range(len(embedding))]
