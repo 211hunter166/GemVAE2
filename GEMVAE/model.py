@@ -224,12 +224,11 @@ class GATE():
         # Total loss
         print("Loss weights are = ",self.contrastive_loss,self.recon_loss,self.weight_decay_loss,self.kl_loss)
         
-        # Calculate positive and negative pairs and contrastive loss
         # For gene modality (H1 and G1)
-        pos_pairs1, neg_pairs1 = self.create_pairs(H1, G1, self, X1, True)
+        pos_pairs1, neg_pairs1 = self.create_pairs(embedding=H1, neighbors=G1, encoder_model=self, original_data=X1, is_gene_modality=True)
 
         # For protein modality (H2 and G2)
-        pos_pairs2, neg_pairs2 = self.create_pairs(H2, G2, self, X2, False)
+        pos_pairs2, neg_pairs2 = self.create_pairs(embedding=H2, neighbors=G2, encoder_model=self, original_data=X2, is_gene_modality=False)
         
         contrastive_loss1 = sum([self.contrastive_loss_function(1, tf.norm(a - b)) for a, b in pos_pairs1]) +                         sum([self.contrastive_loss_function(0, tf.norm(a - b)) for a, b in neg_pairs1])
         contrastive_loss2 = sum([self.contrastive_loss_function(1, tf.norm(a - b)) for a, b in pos_pairs2]) +                         sum([self.contrastive_loss_function(0, tf.norm(a - b)) for a, b in neg_pairs2])
