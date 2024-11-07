@@ -36,25 +36,40 @@ class GATE():
         Positive pairs are node embedding and local neighbor representations.
         Negative pairs are created by shuffling data, passing through encoder, and then finding neighbors.
         """
+        import numpy as np  # Ensure numpy is imported for indices conversion
+
+        # Convert neighbors (a coo_matrix) to a TensorFlow SparseTensor
+        neighbors = tf.sparse.SparseTensor(
+            indices=np.array([neighbors.row, neighbors.col]).T,
+            values=neighbors.data,
+            dense_shape=neighbors.shape
+        )
+
         # Helper function to create a positive pair
         def create_positive_pair(i):
-            return (embedding[i], neighbors[i])
+            # Gather neighbor embedding using sparse tensor operations
+            neighbor_indices = tf.sparse.to_dense(tf.sparse.slice(neighbors, [i, 0], [1, neighbors.shape[1]]))
+            neighbor_embedding = tf.reduce_sum(tf.gather(embedding, neighbor_indices), axis=0)
+            return (embedding[i], neighbor_embedding)
 
-        # Positive pairs: current node embedding and local neighbor embedding
-        positive_pairs = tf.map_fn(create_positive_pair, tf.range(tf.shape(embedding)[0]), dtype=(embedding.dtype, neighbors.dtype))
+        # Positive pairs: current node embedding and aggregated local neighbor embedding
+        positive_pairs = tf.map_fn(create_positive_pair, tf.range(tf.shape(embedding)[0]), dtype=(embedding.dtype, embedding.dtype))
 
         # Shuffle original data to create corrupted (negative) samples
         corrupted_data = tf.random.shuffle(original_data)
         
         # Pass corrupted data through the appropriate encoder
         if is_gene_modality:
-            corrupted_neighbors = tf.map_fn(lambda i: encoder_model.__encoder1(neighbors[i]), tf.range(tf.shape(embedding)[0]), dtype=embedding.dtype)
+            corrupted_embeddings = encoder_model.__encoder1(corrupted_data)  # Encode shuffled data for gene modality
         else:
-            corrupted_neighbors = tf.map_fn(lambda i: encoder_model.__encoder2(neighbors[i]), tf.range(tf.shape(embedding)[0]), dtype=embedding.dtype)
-        
+            corrupted_embeddings = encoder_model.__encoder2(corrupted_data)  # Encode shuffled data for protein modality
+
         # Helper function to create a negative pair
         def create_negative_pair(i):
-            return (embedding[i], corrupted_neighbors[i])
+            # Gather corrupted neighbor embedding using sparse tensor operations
+            neighbor_indices = tf.sparse.to_dense(tf.sparse.slice(neighbors, [i, 0], [1, neighbors.shape[1]]))
+            corrupted_neighbor_embedding = tf.reduce_sum(tf.gather(corrupted_embeddings, neighbor_indices), axis=0)
+            return (embedding[i], corrupted_neighbor_embedding)
 
         # Negative pairs: original embedding paired with corrupted neighbor embeddings
         negative_pairs = tf.map_fn(create_negative_pair, tf.range(tf.shape(embedding)[0]), dtype=(embedding.dtype, embedding.dtype))
