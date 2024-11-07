@@ -31,7 +31,7 @@ class GATE():
         margin_square = K.square(K.maximum(margin - y_pred, 0))
         return K.mean(y_true * square_pred + (1 - y_true) * margin_square)
 
-    def create_pairs(embedding, neighbors, encoder_model, original_data, is_gene_modality=True):
+    def create_pairs(embedding, neighbors, encoder_model, original_data, is_gene_modality):
         """
         Create positive and negative pairs for contrastive learning.
         Positive pairs are node embedding and local neighbor representations.
@@ -226,10 +226,10 @@ class GATE():
         
         # Calculate positive and negative pairs and contrastive loss
         # For gene modality (H1 and G1)
-        pos_pairs1, neg_pairs1 = self.create_pairs(H1, G1, self, X1, is_gene_modality=True)
+        pos_pairs1, neg_pairs1 = self.create_pairs(H1, G1, self, X1, True)
 
         # For protein modality (H2 and G2)
-        pos_pairs2, neg_pairs2 = self.create_pairs(H2, G2, self, X2, is_gene_modality=False)
+        pos_pairs2, neg_pairs2 = self.create_pairs(H2, G2, self, X2, False)
         
         contrastive_loss1 = sum([self.contrastive_loss_function(1, tf.norm(a - b)) for a, b in pos_pairs1]) +                         sum([self.contrastive_loss_function(0, tf.norm(a - b)) for a, b in neg_pairs1])
         contrastive_loss2 = sum([self.contrastive_loss_function(1, tf.norm(a - b)) for a, b in pos_pairs2]) +                         sum([self.contrastive_loss_function(0, tf.norm(a - b)) for a, b in neg_pairs2])
