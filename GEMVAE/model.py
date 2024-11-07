@@ -31,21 +31,27 @@ class GATE():
         margin_square = K.square(K.maximum(margin - y_pred, 0))
         return K.mean(y_true * square_pred + (1 - y_true) * margin_square)
 
-    def create_pairs(embedding, neighbors, encoder_model):
+    def create_pairs(embedding, neighbors, encoder_model, original_data, is_gene_modality=True):
         """
         Create positive and negative pairs for contrastive learning.
         Positive pairs are node embedding and local neighbor representations.
         Negative pairs are created by shuffling data, passing through encoder, and then finding neighbors.
         """
-        # Positive pairs: current node and its neighbors
+        # Positive pairs: current node embedding and local neighbor embedding
         positive_pairs = [(embedding[i], neighbors[i]) for i in range(len(embedding))]
 
-        # Negative pairs: Shuffle data, pass through encoder, and calculate new neighbors
-        corrupted_data = tf.random.shuffle(embedding)  # Shuffling the data for corruption
-        corrupted_embeddings = encoder_model(corrupted_data)  # Passing corrupted data through encoder
-        corrupted_neighbors = [encoder_model(neighbors[i]) for i in range(len(embedding))]  # Neighbor representation for corrupted embeddings
-
-        # Create negative pairs
+        # Shuffle original data to create corrupted (negative) samples
+        corrupted_data = tf.random.shuffle(original_data)
+        
+        # Pass corrupted data through the appropriate encoder
+        if is_gene_modality:
+            corrupted_embeddings = encoder_model.__encoder1(corrupted_data)  # Gene modality encoder
+            corrupted_neighbors = [encoder_model.__encoder1(neighbors[i]) for i in range(len(embedding))]
+        else:
+            corrupted_embeddings = encoder_model.__encoder2(corrupted_data)  # Protein modality encoder
+            corrupted_neighbors = [encoder_model.__encoder2(neighbors[i]) for i in range(len(embedding))]
+        
+        # Negative pairs: original embedding paired with corrupted neighbor embeddings
         negative_pairs = [(embedding[i], corrupted_neighbors[i]) for i in range(len(embedding))]
 
         return positive_pairs, negative_pairs
@@ -219,8 +225,11 @@ class GATE():
         print("Loss weights are = ",self.contrastive_loss,self.recon_loss,self.weight_decay_loss,self.kl_loss)
         
         # Calculate positive and negative pairs and contrastive loss
-        pos_pairs1, neg_pairs1 = self.create_pairs(H1, G1, self.__encoder1)
-        pos_pairs2, neg_pairs2 = self.create_pairs(H2, G2, self.__encoder2)
+        # For gene modality (H1 and G1)
+        pos_pairs1, neg_pairs1 = self.create_pairs(H1, G1, self, X1, is_gene_modality=True)
+
+        # For protein modality (H2 and G2)
+        pos_pairs2, neg_pairs2 = self.create_pairs(H2, G2, self, X2, is_gene_modality=False)
         
         contrastive_loss1 = sum([self.contrastive_loss_function(1, tf.norm(a - b)) for a, b in pos_pairs1]) +                         sum([self.contrastive_loss_function(0, tf.norm(a - b)) for a, b in neg_pairs1])
         contrastive_loss2 = sum([self.contrastive_loss_function(1, tf.norm(a - b)) for a, b in pos_pairs2]) +                         sum([self.contrastive_loss_function(0, tf.norm(a - b)) for a, b in neg_pairs2])
