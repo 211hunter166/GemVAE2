@@ -48,7 +48,7 @@ class GATE():
         # Helper function to create a positive pair
         def create_positive_pair(i):
             # Gather neighbor embedding using sparse tensor operations
-            neighbor_indices = tf.sparse.to_dense(tf.sparse.slice(neighbors, [i, 0], [1, neighbors.shape[1]]))
+            neighbor_indices = tf.cast(tf.sparse.to_dense(tf.sparse.slice(neighbors, [i, 0], [1, neighbors.shape[1]])), tf.int32)
             neighbor_embedding = tf.reduce_sum(tf.gather(embedding, neighbor_indices), axis=0)
             return (embedding[i], neighbor_embedding)
 
@@ -67,7 +67,7 @@ class GATE():
         # Helper function to create a negative pair
         def create_negative_pair(i):
             # Gather corrupted neighbor embedding using sparse tensor operations
-            neighbor_indices = tf.sparse.to_dense(tf.sparse.slice(neighbors, [i, 0], [1, neighbors.shape[1]]))
+            neighbor_indices = tf.cast(tf.sparse.to_dense(tf.sparse.slice(neighbors, [i, 0], [1, neighbors.shape[1]])), tf.int32)
             corrupted_neighbor_embedding = tf.reduce_sum(tf.gather(corrupted_embeddings, neighbor_indices), axis=0)
             return (embedding[i], corrupted_neighbor_embedding)
 
