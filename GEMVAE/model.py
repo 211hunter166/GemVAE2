@@ -37,7 +37,7 @@ class GATE():
         Negative pairs are created by shuffling data, passing through encoder, and then finding neighbors.
         """
         # Positive pairs: current node embedding and local neighbor embedding
-        positive_pairs = [(embedding[i], neighbors[i]) for i in range(len(embedding))]
+        positive_pairs = [(embedding[i], neighbors[i]) for i in range(embedding.shape)]
 
         # Shuffle original data to create corrupted (negative) samples
         corrupted_data = tf.random.shuffle(original_data)
@@ -51,7 +51,7 @@ class GATE():
             corrupted_neighbors = [encoder_model.__encoder2(neighbors[i]) for i in range(embedding.shape)]
         
         # Negative pairs: original embedding paired with corrupted neighbor embeddings
-        negative_pairs = [(embedding[i], corrupted_neighbors[i]) for i in range(len(embedding))]
+        negative_pairs = [(embedding[i], corrupted_neighbors[i]) for i in range(embedding.shape)]
 
         return positive_pairs, negative_pairs
 
