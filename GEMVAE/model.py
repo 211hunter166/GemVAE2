@@ -21,7 +21,6 @@ class LinBnDrop(tf.keras.Sequential):
 class GATE():
 
 
-
     def contrastive_loss_function(y_true, y_pred, margin=1.0):
         """
         Calculates contrastive loss, aiming to bring positive pairs closer 
@@ -30,7 +29,7 @@ class GATE():
         square_pred = K.square(y_pred)
         margin_square = K.square(K.maximum(margin - y_pred, 0))
         return K.mean(y_true * square_pred + (1 - y_true) * margin_square)
-
+    @staticmethod
     def create_pairs(embedding, neighbors, encoder_model, original_data, is_gene_modality):
         """
         Create positive and negative pairs for contrastive learning.
