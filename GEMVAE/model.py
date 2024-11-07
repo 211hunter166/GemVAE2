@@ -37,7 +37,7 @@ class GATE():
         Negative pairs are created by shuffling data, passing through encoder, and then finding neighbors.
         """
         # Positive pairs: current node embedding and local neighbor embedding
-        positive_pairs = [(embedding[i], neighbors[i]) for i in range(embedding.shape)]
+        positive_pairs = [(embedding[i], neighbors[i]) for i in range(tf.shape(embedding)[0])]
 
         # Shuffle original data to create corrupted (negative) samples
         corrupted_data = tf.random.shuffle(original_data)
@@ -45,13 +45,13 @@ class GATE():
         # Pass corrupted data through the appropriate encoder
         if is_gene_modality:
             corrupted_embeddings = encoder_model.__encoder1(corrupted_data)  # Gene modality encoder
-            corrupted_neighbors = [encoder_model.__encoder1(neighbors[i]) for i in range(embedding.shape)]
+            corrupted_neighbors = [encoder_model.__encoder1(neighbors[i]) for i in range(tf.shape(embedding)[0])]
         else:
             corrupted_embeddings = encoder_model.__encoder2(corrupted_data)  # Protein modality encoder
-            corrupted_neighbors = [encoder_model.__encoder2(neighbors[i]) for i in range(embedding.shape)]
+            corrupted_neighbors = [encoder_model.__encoder2(neighbors[i]) for i in range(tf.shape(embedding)[0])]
         
         # Negative pairs: original embedding paired with corrupted neighbor embeddings
-        negative_pairs = [(embedding[i], corrupted_neighbors[i]) for i in range(embedding.shape)]
+        negative_pairs = [(embedding[i], corrupted_neighbors[i]) for i in range(tf.shape(embedding)[0])]
 
         return positive_pairs, negative_pairs
 
