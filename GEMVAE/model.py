@@ -3,6 +3,7 @@ import tensorflow as tf
 import tensorflow.compat.v1 as v1
 import tensorflow as tf
 import tensorflow.keras.backend as K
+import numpy as np
 
 class LinBnDrop(tf.keras.Sequential):
     def __init__(self, n_in, n_out, bn=True, p=0., act=None, lin_first=True):
@@ -21,6 +22,7 @@ class LinBnDrop(tf.keras.Sequential):
 class GATE():
 
 
+
     def contrastive_loss_function(y_true, y_pred, margin=1.0):
         """
         Calculates contrastive loss, aiming to bring positive pairs closer 
@@ -29,14 +31,30 @@ class GATE():
         square_pred = K.square(y_pred)
         margin_square = K.square(K.maximum(margin - y_pred, 0))
         return K.mean(y_true * square_pred + (1 - y_true) * margin_square)
+
+    
+
+    def encode_all_layers(self, A, prune_A, data, is_gene_modality):
+        """Encodes data through all layers, either using gene or protein modality."""
+        H = data
+        n_layers = self.n_layers1 if is_gene_modality else self.n_layers2
+        for layer in range(n_layers):
+            if is_gene_modality:
+                H = self.__encoder1(A, prune_A, H, layer)
+            else:
+                H = self.__encoder2(A, prune_A, H, layer)
+            if self.nonlinear and layer != n_layers - 1:
+                H = tf.nn.elu(H)
+        return H
+
     @staticmethod
-    def create_pairs(embedding, neighbors, encoder_model, original_data, is_gene_modality):
+    def create_pairs(embedding, neighbors, encoder_model, original_data, A, prune_A, is_gene_modality):
         """
         Create positive and negative pairs for contrastive learning.
         Positive pairs are node embedding and local neighbor representations.
         Negative pairs are created by shuffling data, passing through encoder, and then finding neighbors.
         """
-        import numpy as np  # Ensure numpy is imported for indices conversion
+          # Ensure numpy is imported for indices conversion
 
         # Convert neighbors (a coo_matrix) to a TensorFlow SparseTensor
         neighbors = tf.sparse.SparseTensor(
@@ -58,11 +76,8 @@ class GATE():
         # Shuffle original data to create corrupted (negative) samples
         corrupted_data = tf.random.shuffle(original_data)
         
-        # Pass corrupted data through the appropriate encoder
-        if is_gene_modality:
-            corrupted_embeddings = encoder_model.__encoder1(corrupted_data)  # Encode shuffled data for gene modality
-        else:
-            corrupted_embeddings = encoder_model.__encoder2(corrupted_data)  # Encode shuffled data for protein modality
+        # Pass corrupted data through all layers of the appropriate encoder
+        corrupted_embeddings = encoder_model.encode_all_layers(A, prune_A, corrupted_data, is_gene_modality)
 
         # Helper function to create a negative pair
         def create_negative_pair(i):
@@ -75,6 +90,7 @@ class GATE():
         negative_pairs = tf.map_fn(create_negative_pair, tf.range(tf.shape(embedding)[0]), dtype=(embedding.dtype, embedding.dtype))
 
         return positive_pairs, negative_pairs
+
 
 
     def __init__(self, hidden_dims1, hidden_dims2,z_dim=30,alpha=0.3, nonlinear=True, weight_decay=0.0001, num_hidden=256, num_proj_hidden=256, tau=0.5,kl_loss = 0.02,contrastive_loss = 0.1,recon_loss = 1,weight_decay_loss = 1,recon_loss_type = "MSE"):
@@ -245,11 +261,28 @@ class GATE():
         # Total loss
         print("Loss weights are = ",self.contrastive_loss,self.recon_loss,self.weight_decay_loss,self.kl_loss)
         
-        # For gene modality (H1 and G1)
-        pos_pairs1, neg_pairs1 = self.create_pairs(embedding=H1, neighbors=G1, encoder_model=self, original_data=X1, is_gene_modality=True)
+        # Calculate positive and negative pairs and contrastive loss
+        pos_pairs1, neg_pairs1 = self.create_pairs(
+            embedding=H1,
+            neighbors=G1,
+            encoder_model=self,
+            original_data=X1,
+            A=A1,
+            prune_A=prune_A1,
+            is_gene_modality=True
+        )
 
         # For protein modality (H2 and G2)
-        pos_pairs2, neg_pairs2 = self.create_pairs(embedding=H2, neighbors=G2, encoder_model=self, original_data=X2, is_gene_modality=False)
+        pos_pairs2, neg_pairs2 = self.create_pairs(
+            embedding=H2,
+            neighbors=G2,
+            encoder_model=self,
+            original_data=X2,
+            A=A2,
+            prune_A=prune_A2,
+            is_gene_modality=False
+        )
+
         
         contrastive_loss1 = sum([self.contrastive_loss_function(1, tf.norm(a - b)) for a, b in pos_pairs1]) +                         sum([self.contrastive_loss_function(0, tf.norm(a - b)) for a, b in neg_pairs1])
         contrastive_loss2 = sum([self.contrastive_loss_function(1, tf.norm(a - b)) for a, b in pos_pairs2]) +                         sum([self.contrastive_loss_function(0, tf.norm(a - b)) for a, b in neg_pairs2])
