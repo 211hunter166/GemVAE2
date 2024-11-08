@@ -285,22 +285,21 @@ class GATE():
 
         
         # Calculate contrastive loss for positive pairs
-        contrastive_loss1_pos = tf.reduce_sum(
-            tf.map_fn(lambda pair: self.contrastive_loss_function(1, tf.norm(pair[0] - pair[1])), pos_pairs1, dtype=tf.float32)
+        contrastive_loss1 = tf.reduce_sum(
+            tf.map_fn(lambda pair: self.contrastive_loss_function(1, tf.norm(pair[0] - pair[1])),
+                    pos_pairs1, fn_output_signature=tf.float32)
+        ) + tf.reduce_sum(
+            tf.map_fn(lambda pair: self.contrastive_loss_function(0, tf.norm(pair[0] - pair[1])),
+                    neg_pairs1, fn_output_signature=tf.float32)
         )
-        contrastive_loss1_neg = tf.reduce_sum(
-            tf.map_fn(lambda pair: self.contrastive_loss_function(0, tf.norm(pair[0] - pair[1])), neg_pairs1, dtype=tf.float32)
-        )
-        contrastive_loss1 = contrastive_loss1_pos + contrastive_loss1_neg
 
-        # Calculate contrastive loss for protein modality pairs
-        contrastive_loss2_pos = tf.reduce_sum(
-            tf.map_fn(lambda pair: self.contrastive_loss_function(1, tf.norm(pair[0] - pair[1])), pos_pairs2, dtype=tf.float32)
+        contrastive_loss2 = tf.reduce_sum(
+            tf.map_fn(lambda pair: self.contrastive_loss_function(1, tf.norm(pair[0] - pair[1])),
+                    pos_pairs2, fn_output_signature=tf.float32)
+        ) + tf.reduce_sum(
+            tf.map_fn(lambda pair: self.contrastive_loss_function(0, tf.norm(pair[0] - pair[1])),
+                    neg_pairs2, fn_output_signature=tf.float32)
         )
-        contrastive_loss2_neg = tf.reduce_sum(
-            tf.map_fn(lambda pair: self.contrastive_loss_function(0, tf.norm(pair[0] - pair[1])), neg_pairs2, dtype=tf.float32)
-        )
-        contrastive_loss2 = contrastive_loss2_pos + contrastive_loss2_neg
 
         # Total contrastive loss
         total_contrastive_loss = contrastive_loss1 + contrastive_loss2
