@@ -130,7 +130,7 @@ class GATE():
         self.W_dec2 = {}
         for layer in range(self.n_layers2 - 1, -1, -1):
             self.W_dec2[layer] = tf.Variable(tf.random.normal([hidden_dims2[layer+1], hidden_dims2[layer]]))
-    
+    @staticmethod
     def convert_coo_to_sparse_tensor(coo_matrix):
         """Convert a scipy.sparse.coo_matrix to tf.SparseTensor."""
         indices = np.vstack((coo_matrix.row, coo_matrix.col)).T
