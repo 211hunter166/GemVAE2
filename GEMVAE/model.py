@@ -130,6 +130,14 @@ class GATE():
         self.W_dec2 = {}
         for layer in range(self.n_layers2 - 1, -1, -1):
             self.W_dec2[layer] = tf.Variable(tf.random.normal([hidden_dims2[layer+1], hidden_dims2[layer]]))
+    
+    def convert_coo_to_sparse_tensor(coo_matrix):
+        """Convert a scipy.sparse.coo_matrix to tf.SparseTensor."""
+        indices = np.vstack((coo_matrix.row, coo_matrix.col)).T
+        values = coo_matrix.data
+        dense_shape = coo_matrix.shape
+        return tf.SparseTensor(indices=indices, values=values, dense_shape=dense_shape)
+
 
     def __call__(self, A1,A2 ,prune_A1,prune_A2, X1,X2,G1,G2):
         # Encoder 1
@@ -264,15 +272,18 @@ class GATE():
         
         # Calculate positive and negative pairs and contrastive loss
         
+        # Convert your neighbors matrices to TensorFlow SparseTensor format
+        G1_sparse = self.convert_coo_to_sparse_tensor(G1)
+        G2_sparse = self.convert_coo_to_sparse_tensor(G2)
 
         pos_pairs1, neg_pairs1 = self.create_pairs(
-        embedding=H1,
-        neighbors=G1,
-        encoder_model=self,
-        original_data=X1,
-        A=A1,
-        prune_A=prune_A1,
-        is_gene_modality=True
+            embedding=H1,
+            neighbors=G1_sparse,  # Use the converted sparse tensor here
+            encoder_model=self,
+            original_data=X1,
+            A=A1,
+            prune_A=prune_A1,
+            is_gene_modality=True
         )
 
         # Project the neighbor embeddings in each pair for gene modality
@@ -300,7 +311,7 @@ class GATE():
         # Repeat for protein modality (H2 and G2)
         pos_pairs2, neg_pairs2 = self.create_pairs(
             embedding=H2,
-            neighbors=G2,
+            neighbors=G2_sparse,  # Use the converted sparse tensor here
             encoder_model=self,
             original_data=X2,
             A=A2,
