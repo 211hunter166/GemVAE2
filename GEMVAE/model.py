@@ -55,7 +55,7 @@ class GATE():
         Positive pairs are node embedding and local neighbor representations.
         Negative pairs are created by shuffling data, passing through encoder, and then finding neighbors.
         """
-          # Ensure numpy is imported for indices conversion
+        import numpy as np  # Ensure numpy is imported for indices conversion
 
         # Convert neighbors (a coo_matrix) to a TensorFlow SparseTensor
         neighbors = tf.sparse.SparseTensor(
@@ -64,30 +64,28 @@ class GATE():
             dense_shape=neighbors.shape
         )
 
+        # Use a dense layer to ensure consistent dimensions
+        projection_layer = tf.keras.layers.Dense(embedding.shape[-1], activation=None)
+
         # Helper function to create a positive pair
         def create_positive_pair(i):
-            # Gather neighbor embedding using sparse tensor operations
             neighbor_indices = tf.cast(tf.sparse.to_dense(tf.sparse.slice(neighbors, [i, 0], [1, neighbors.shape[1]])), tf.int32)
             neighbor_embedding = tf.reduce_sum(tf.gather(embedding, neighbor_indices), axis=0)
+            neighbor_embedding = projection_layer(neighbor_embedding)  # Project to match embedding dimension
             return (embedding[i], neighbor_embedding)
 
-        # Positive pairs: current node embedding and aggregated local neighbor embedding
         positive_pairs = tf.map_fn(create_positive_pair, tf.range(tf.shape(embedding)[0]), dtype=(embedding.dtype, embedding.dtype))
 
         # Shuffle original data to create corrupted (negative) samples
         corrupted_data = tf.random.shuffle(original_data)
-        
-        # Pass corrupted data through all layers of the appropriate encoder
         corrupted_embeddings = encoder_model.encode_all_layers(A, prune_A, corrupted_data, is_gene_modality)
 
-        # Helper function to create a negative pair
         def create_negative_pair(i):
-            # Gather corrupted neighbor embedding using sparse tensor operations
             neighbor_indices = tf.cast(tf.sparse.to_dense(tf.sparse.slice(neighbors, [i, 0], [1, neighbors.shape[1]])), tf.int32)
             corrupted_neighbor_embedding = tf.reduce_sum(tf.gather(corrupted_embeddings, neighbor_indices), axis=0)
+            corrupted_neighbor_embedding = projection_layer(corrupted_neighbor_embedding)  # Project to match embedding dimension
             return (embedding[i], corrupted_neighbor_embedding)
 
-        # Negative pairs: original embedding paired with corrupted neighbor embeddings
         negative_pairs = tf.map_fn(create_negative_pair, tf.range(tf.shape(embedding)[0]), dtype=(embedding.dtype, embedding.dtype))
 
         return positive_pairs, negative_pairs
@@ -285,7 +283,6 @@ class GATE():
         )
 
         
-       # Calculate contrastive loss for positive and negative pairs for gene modality
         contrastive_loss1 = tf.reduce_sum(
             tf.map_fn(lambda pair: GATE.contrastive_loss_function(1, tf.norm(pair[0] - pair[1])),
                     pos_pairs1, fn_output_signature=tf.float32)
@@ -294,7 +291,6 @@ class GATE():
                     neg_pairs1, fn_output_signature=tf.float32)
         )
 
-        # Calculate contrastive loss for positive and negative pairs for protein modality
         contrastive_loss2 = tf.reduce_sum(
             tf.map_fn(lambda pair: GATE.contrastive_loss_function(1, tf.norm(pair[0] - pair[1])),
                     pos_pairs2, fn_output_signature=tf.float32)
