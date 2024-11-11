@@ -23,6 +23,7 @@ class GATE():
 
 
 
+    @staticmethod
     def contrastive_loss_function(y_true, y_pred, margin=1.0):
         """
         Calculates contrastive loss, aiming to bring positive pairs closer 
@@ -284,20 +285,21 @@ class GATE():
         )
 
         
-        # Calculate contrastive loss for positive pairs
+       # Calculate contrastive loss for positive and negative pairs for gene modality
         contrastive_loss1 = tf.reduce_sum(
-            tf.map_fn(lambda pair: self.contrastive_loss_function(1, tf.norm(pair[0] - pair[1])),
+            tf.map_fn(lambda pair: GATE.contrastive_loss_function(1, tf.norm(pair[0] - pair[1])),
                     pos_pairs1, fn_output_signature=tf.float32)
         ) + tf.reduce_sum(
-            tf.map_fn(lambda pair: self.contrastive_loss_function(0, tf.norm(pair[0] - pair[1])),
+            tf.map_fn(lambda pair: GATE.contrastive_loss_function(0, tf.norm(pair[0] - pair[1])),
                     neg_pairs1, fn_output_signature=tf.float32)
         )
 
+        # Calculate contrastive loss for positive and negative pairs for protein modality
         contrastive_loss2 = tf.reduce_sum(
-            tf.map_fn(lambda pair: self.contrastive_loss_function(1, tf.norm(pair[0] - pair[1])),
+            tf.map_fn(lambda pair: GATE.contrastive_loss_function(1, tf.norm(pair[0] - pair[1])),
                     pos_pairs2, fn_output_signature=tf.float32)
         ) + tf.reduce_sum(
-            tf.map_fn(lambda pair: self.contrastive_loss_function(0, tf.norm(pair[0] - pair[1])),
+            tf.map_fn(lambda pair: GATE.contrastive_loss_function(0, tf.norm(pair[0] - pair[1])),
                     neg_pairs2, fn_output_signature=tf.float32)
         )
 
