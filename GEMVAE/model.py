@@ -56,9 +56,12 @@ class GATE():
         Negative pairs are created by shuffling data, passing through encoder, and then finding neighbors.
         """
         
-        # Helper function for projecting embeddings to a specific dimension
-        def project_embedding(neighbor_embedding, target_dim):
-            projection_layer = tf.keras.layers.Dense(target_dim, use_bias=False)
+        # Use tf.init_scope to define the projection layer within the function safely
+        with tf.init_scope():
+            projection_layer = tf.keras.layers.Dense(embedding.shape[-1], use_bias=False)
+
+        # Helper function to project embeddings to a specific dimension using the projection layer
+        def project_embedding(neighbor_embedding):
             return projection_layer(neighbor_embedding)
 
         # Convert neighbors (a coo_matrix) to a TensorFlow SparseTensor
@@ -75,7 +78,7 @@ class GATE():
             neighbor_embedding = tf.reduce_sum(tf.gather(embedding, neighbor_indices), axis=0)
             
             # Project neighbor embedding to match embedding dimension
-            neighbor_embedding_projected = project_embedding(neighbor_embedding, target_dim=embedding.shape[-1])
+            neighbor_embedding_projected = project_embedding(neighbor_embedding)
             
             return (embedding[i], neighbor_embedding_projected)
 
@@ -95,7 +98,7 @@ class GATE():
             corrupted_neighbor_embedding = tf.reduce_sum(tf.gather(corrupted_embeddings, neighbor_indices), axis=0)
             
             # Project corrupted neighbor embedding to match embedding dimension
-            corrupted_neighbor_embedding_projected = project_embedding(corrupted_neighbor_embedding, target_dim=embedding.shape[-1])
+            corrupted_neighbor_embedding_projected = project_embedding(corrupted_neighbor_embedding)
             
             return (embedding[i], corrupted_neighbor_embedding_projected)
 
