@@ -50,19 +50,7 @@ class GATE():
 
     @staticmethod
     def create_pairs(embedding, neighbors, encoder_model, original_data, A, prune_A, is_gene_modality):
-        """
-        Create positive and negative pairs for contrastive learning.
-        Positive pairs are node embedding and local neighbor representations.
-        Negative pairs are created by shuffling data, passing through encoder, and then finding neighbors.
-        """
-        
-        # Use tf.init_scope to define the projection layer within the function safely
-        with tf.init_scope():
-            projection_layer = tf.keras.layers.Dense(embedding.shape[-1], use_bias=False)
-
-        # Helper function to project embeddings to a specific dimension using the projection layer
-        def project_embedding(neighbor_embedding):
-            return projection_layer(neighbor_embedding)
+        import numpy as np
 
         # Convert neighbors (a coo_matrix) to a TensorFlow SparseTensor
         neighbors = tf.sparse.SparseTensor(
@@ -71,18 +59,11 @@ class GATE():
             dense_shape=neighbors.shape
         )
 
-        # Helper function to create a positive pair
         def create_positive_pair(i):
-            # Gather neighbor embedding using sparse tensor operations
             neighbor_indices = tf.cast(tf.sparse.to_dense(tf.sparse.slice(neighbors, [i, 0], [1, neighbors.shape[1]])), tf.int32)
             neighbor_embedding = tf.reduce_sum(tf.gather(embedding, neighbor_indices), axis=0)
-            
-            # Project neighbor embedding to match embedding dimension
-            neighbor_embedding_projected = project_embedding(neighbor_embedding)
-            
-            return (embedding[i], neighbor_embedding_projected)
+            return (embedding[i], neighbor_embedding)
 
-        # Positive pairs: current node embedding and aggregated local neighbor embedding
         positive_pairs = tf.map_fn(create_positive_pair, tf.range(tf.shape(embedding)[0]), dtype=(embedding.dtype, embedding.dtype))
 
         # Shuffle original data to create corrupted (negative) samples
@@ -91,18 +72,11 @@ class GATE():
         # Pass corrupted data through all layers of the appropriate encoder
         corrupted_embeddings = encoder_model.encode_all_layers(A, prune_A, corrupted_data, is_gene_modality)
 
-        # Helper function to create a negative pair
         def create_negative_pair(i):
-            # Gather corrupted neighbor embedding using sparse tensor operations
             neighbor_indices = tf.cast(tf.sparse.to_dense(tf.sparse.slice(neighbors, [i, 0], [1, neighbors.shape[1]])), tf.int32)
             corrupted_neighbor_embedding = tf.reduce_sum(tf.gather(corrupted_embeddings, neighbor_indices), axis=0)
-            
-            # Project corrupted neighbor embedding to match embedding dimension
-            corrupted_neighbor_embedding_projected = project_embedding(corrupted_neighbor_embedding)
-            
-            return (embedding[i], corrupted_neighbor_embedding_projected)
+            return (embedding[i], corrupted_neighbor_embedding)
 
-        # Negative pairs: original embedding paired with corrupted neighbor embeddings
         negative_pairs = tf.map_fn(create_negative_pair, tf.range(tf.shape(embedding)[0]), dtype=(embedding.dtype, embedding.dtype))
 
         return positive_pairs, negative_pairs
@@ -278,7 +252,12 @@ class GATE():
         print("Loss weights are = ",self.contrastive_loss,self.recon_loss,self.weight_decay_loss,self.kl_loss)
         
         # Calculate positive and negative pairs and contrastive loss
-        pos_pairs1, neg_pairs1 = self.create_pairs(
+        # Initialize projection layers for gene and protein modalities with respective dimensions
+        projection_layer_gene = tf.keras.layers.Dense(H1.shape[-1], activation=None)
+        projection_layer_protein = tf.keras.layers.Dense(H2.shape[-1], activation=None)
+
+        # Generate pairs for gene modality
+        pos_pairs1, neg_pairs1 = GATE.create_pairs(
             embedding=H1,
             neighbors=G1,
             encoder_model=self,
@@ -288,8 +267,8 @@ class GATE():
             is_gene_modality=True
         )
 
-        # For protein modality (H2 and G2)
-        pos_pairs2, neg_pairs2 = self.create_pairs(
+        # Generate pairs for protein modality
+        pos_pairs2, neg_pairs2 = GATE.create_pairs(
             embedding=H2,
             neighbors=G2,
             encoder_model=self,
@@ -299,21 +278,30 @@ class GATE():
             is_gene_modality=False
         )
 
-        
+        # Apply projection to neighbor embeddings in positive and negative pairs for gene modality
+        projected_pos_pairs1 = [(a, projection_layer_gene(b)) for a, b in pos_pairs1]
+        projected_neg_pairs1 = [(a, projection_layer_gene(b)) for a, b in neg_pairs1]
+
+        # Calculate contrastive loss for gene modality
         contrastive_loss1 = tf.reduce_sum(
-            tf.map_fn(lambda pair: GATE.contrastive_loss_function(1, tf.norm(pair[0] - pair[1])),
-                    pos_pairs1, fn_output_signature=tf.float32)
+            tf.map_fn(lambda pair: self.contrastive_loss_function(1, tf.norm(pair[0] - pair[1])),
+                    projected_pos_pairs1, fn_output_signature=tf.float32)
         ) + tf.reduce_sum(
-            tf.map_fn(lambda pair: GATE.contrastive_loss_function(0, tf.norm(pair[0] - pair[1])),
-                    neg_pairs1, fn_output_signature=tf.float32)
+            tf.map_fn(lambda pair: self.contrastive_loss_function(0, tf.norm(pair[0] - pair[1])),
+                    projected_neg_pairs1, fn_output_signature=tf.float32)
         )
 
+        # Apply projection to neighbor embeddings in positive and negative pairs for protein modality
+        projected_pos_pairs2 = [(a, projection_layer_protein(b)) for a, b in pos_pairs2]
+        projected_neg_pairs2 = [(a, projection_layer_protein(b)) for a, b in neg_pairs2]
+
+        # Calculate contrastive loss for protein modality
         contrastive_loss2 = tf.reduce_sum(
-            tf.map_fn(lambda pair: GATE.contrastive_loss_function(1, tf.norm(pair[0] - pair[1])),
-                    pos_pairs2, fn_output_signature=tf.float32)
+            tf.map_fn(lambda pair: self.contrastive_loss_function(1, tf.norm(pair[0] - pair[1])),
+                    projected_pos_pairs2, fn_output_signature=tf.float32)
         ) + tf.reduce_sum(
-            tf.map_fn(lambda pair: GATE.contrastive_loss_function(0, tf.norm(pair[0] - pair[1])),
-                    neg_pairs2, fn_output_signature=tf.float32)
+            tf.map_fn(lambda pair: self.contrastive_loss_function(0, tf.norm(pair[0] - pair[1])),
+                    projected_neg_pairs2, fn_output_signature=tf.float32)
         )
 
         # Total contrastive loss
