@@ -49,20 +49,19 @@ class GATE():
         return H
 
     
-    @tf.function  # Decorate with @tf.function for graph execution
     def project_embedding(self, neighbor_embedding, target_dim):
         """
         Projects the neighbor embedding to the specified target dimension.
         """
-        # Ensure neighbor_embedding is 2D by adding a batch dimension if necessary
+        # Ensure that the embedding has the correct shape
         if len(neighbor_embedding.shape) == 1:
-            neighbor_embedding = tf.expand_dims(neighbor_embedding, axis=0)  # Shape becomes (1, feature_dim)
+            neighbor_embedding = tf.expand_dims(neighbor_embedding, axis=0)
         
-        # Pass the 2D tensor to the projection layer
-        projected_embedding = self.projection_layer(neighbor_embedding)
+        # Apply the projection
+        with tf.init_scope():
+            projected_embedding = self.projection_layer(neighbor_embedding)
         
-        # Remove the batch dimension after projection if needed
-        return tf.squeeze(projected_embedding, axis=0)  # Shape becomes (target_dim,)
+        return projected_embedding
     
     def project_pairs(self, pairs, target_dim):
         """
