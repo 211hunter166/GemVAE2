@@ -53,6 +53,17 @@ class GATE():
     def project_embedding(self,neighbor_embedding, target_dim):
         # projection_layer = tf.keras.layers.Dense(target_dim)
         return self.projection_layer(neighbor_embedding)
+    
+    @tf.function
+    def project_pairs(self, pairs, target_dim):
+        """
+        Projects the second element in each pair using the projection layer.
+        """
+        return tf.map_fn(
+            lambda pair: (pair[0], self.project_embedding(pair[1], target_dim=target_dim)),
+            pairs,
+            fn_output_signature=(tf.float32, tf.float32)
+        )
 
     @staticmethod
     @tf.function  # Ensures the function runs in graph mode
@@ -292,17 +303,8 @@ class GATE():
         )
 
         # Project the neighbor embeddings in each pair for gene modality
-        projected_pos_pairs1 = tf.map_fn(
-            lambda pair: (pair[0], self.project_embedding(pair[1], target_dim=H1.shape[-1])),
-            pos_pairs1,
-            fn_output_signature=(H1.dtype, H1.dtype)
-        )
-
-        projected_neg_pairs1 = tf.map_fn(
-            lambda pair: (pair[0], self.project_embedding(pair[1], target_dim=H1.shape[-1])),
-            neg_pairs1,
-            fn_output_signature=(H1.dtype, H1.dtype)
-        )
+        projected_pos_pairs1 = self.project_pairs(pos_pairs1, target_dim=H1.shape[-1])
+        projected_neg_pairs1 = self.project_pairs(neg_pairs1, target_dim=H1.shape[-1])
 
         # Calculate contrastive loss for projected positive and negative pairs
         contrastive_loss1 = tf.reduce_sum(
@@ -325,17 +327,8 @@ class GATE():
         )
 
         # Project the neighbor embeddings in each pair for protein modality
-        projected_pos_pairs2 = tf.map_fn(
-            lambda pair: (pair[0], self.project_embedding(pair[1], target_dim=H2.shape[-1])),
-            pos_pairs2,
-            fn_output_signature=(H2.dtype, H2.dtype)
-        )
-
-        projected_neg_pairs2 = tf.map_fn(
-            lambda pair: (pair[0], self.project_embedding(pair[1], target_dim=H2.shape[-1])),
-            neg_pairs2,
-            fn_output_signature=(H2.dtype, H2.dtype)
-        )
+        projected_pos_pairs2 = self.project_pairs(pos_pairs2, target_dim=H2.shape[-1])
+        projected_neg_pairs2 = self.project_pairs(neg_pairs2, target_dim=H2.shape[-1])
 
         # Calculate contrastive loss for projected positive and negative pairs for protein modality
         contrastive_loss2 = tf.reduce_sum(
