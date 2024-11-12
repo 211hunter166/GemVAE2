@@ -48,11 +48,11 @@ class GATE():
                 H = tf.nn.elu(H)
         return H
 
-    @staticmethod
+    
     @tf.function  # Decorate with @tf.function for graph execution
-    def project_embedding(neighbor_embedding, target_dim):
-        projection_layer = tf.keras.layers.Dense(target_dim)
-        return projection_layer(neighbor_embedding)
+    def project_embedding(self,neighbor_embedding, target_dim):
+        # projection_layer = tf.keras.layers.Dense(target_dim)
+        return self.projection_layer(neighbor_embedding)
 
     @staticmethod
     @tf.function  # Ensures the function runs in graph mode
@@ -122,6 +122,9 @@ class GATE():
         self.recon_loss = recon_loss
         self.weight_decay_loss = weight_decay_loss
         self.recon_loss_type = recon_loss_type
+
+        #newly added
+        self.projection_layer = tf.keras.layers.Dense(self.num_hidden, activation='elu')
 
         # Decoder 1
         self.W_dec1 = {}
