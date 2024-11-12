@@ -62,12 +62,14 @@ class GATE():
         Positive pairs are node embedding and local neighbor representations.
         Negative pairs are created by shuffling data, passing through encoder, and then finding neighbors.
         """
-        # Convert neighbors (a coo_matrix) to a SparseTensor
-        neighbors = tf.sparse.SparseTensor(
-            indices=tf.convert_to_tensor(list(zip(neighbors.row, neighbors.col)), dtype=tf.int64),
-            values=neighbors.data,
-            dense_shape=neighbors.shape
-        )
+       # Convert neighbors (a coo_matrix) to a SparseTensor only if it's not already a SparseTensor
+        if not isinstance(neighbors, tf.SparseTensor):
+            import numpy as np
+            neighbors = tf.sparse.SparseTensor(
+                indices=np.array([neighbors.row, neighbors.col]).T,
+                values=neighbors.data,
+                dense_shape=neighbors.shape
+            )
 
         # Helper function to create a positive pair
         def create_positive_pair(i):
