@@ -60,7 +60,8 @@ class GATE():
         """
         projected_pairs = []
         for pair in pairs:
-            projected_embedding = self.project_embedding(pair[1])
+            # Pass both the embedding and the target dimension
+            projected_embedding = self.project_embedding(pair[1], target_dim)
             projected_pairs.append((pair[0], projected_embedding))
         return projected_pairs
 
