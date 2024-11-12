@@ -54,16 +54,15 @@ class GATE():
         # projection_layer = tf.keras.layers.Dense(target_dim)
         return self.projection_layer(neighbor_embedding)
     
-    @tf.function
     def project_pairs(self, pairs, target_dim):
         """
         Projects the second element in each pair using the projection layer.
         """
-        return tf.map_fn(
-            lambda pair: (pair[0], self.project_embedding(pair[1], target_dim=target_dim)),
-            pairs,
-            fn_output_signature=(tf.float32, tf.float32)
-        )
+        projected_pairs = []
+        for pair in pairs:
+            projected_embedding = self.project_embedding(pair[1])
+            projected_pairs.append((pair[0], projected_embedding))
+        return projected_pairs
 
     @staticmethod
     @tf.function  # Ensures the function runs in graph mode
