@@ -124,7 +124,7 @@ class GATE():
         self.recon_loss_type = recon_loss_type
 
         #newly added
-        self.projection_layer = tf.keras.layers.Dense(self.num_hidden, activation='elu')
+        self.projection_layer = tf.keras.layers.Dense(num_hidden, activation='elu')
 
         # Decoder 1
         self.W_dec1 = {}
